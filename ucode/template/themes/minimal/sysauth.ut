@@ -1,0 +1,70 @@
+{#
+ luci-theme-minimal login page
+ Licensed to the public under the Apache License 2.0.
+-#}
+
+{% include('header', { blank_page: true }) %}
+
+{% const boardinfo = ubus.call('system', 'board') ?? {}; %}
+
+<main class="login">
+	<form method="post" class="login-card">
+		<div class="login-head">
+			<img class="login-logo" src="{{ media }}/logo.svg" alt="">
+			<h2>{{ striptags(boardinfo.hostname ?? 'OpenWrt') }}</h2>
+			<p>{{ _('Authorization Required') }}</p>
+		</div>
+
+		{% if (auth_message): %}
+		<div class="alert-message{% if (auth_plugin): %} warning{% endif %}">
+			{{ auth_message }}
+		</div>
+		{% elif (fuser): %}
+		<div class="alert-message error">
+			{{ _('Invalid username and/or password! Please try again.') }}
+		</div>
+		{% endif %}
+
+		<div class="login-field">
+			<label for="luci_username">{{ _('Username') }}</label>
+			<input name="luci_username" id="luci_username" type="text" autocomplete="username" value="{{ entityencode(duser, true) }}">
+		</div>
+		<div class="login-field">
+			<label for="luci_password">{{ _('Password') }}</label>
+			<input name="luci_password" id="luci_password" type="password" autocomplete="current-password" autofocus>
+		</div>
+
+		{% if (auth_fields): %}
+			{% for (let field in auth_fields): %}
+				<div class="login-field">
+					<label for="{{ field.name }}">{{ _(field.label ?? field.name) }}</label>
+					<input
+						name="{{ field.name }}"
+						id="{{ field.name }}"
+						type="{{ field.type ?? 'text' }}"
+						{% if (field.placeholder): %}placeholder="{{ field.placeholder }}"{% endif %}
+						{% if (field.inputmode): %}inputmode="{{ field.inputmode }}"{% endif %}
+						{% if (field.pattern): %}pattern="{{ field.pattern }}"{% endif %}
+						{% if (field.maxlength): %}maxlength="{{ field.maxlength }}"{% endif %}
+						{% if (field.autocomplete): %}autocomplete="{{ field.autocomplete }}"{% endif %}
+						{% if (field.required): %}required{% endif %}
+					>
+				</div>
+			{% endfor %}
+		{% endif %}
+		{% if (auth_html): %}
+			<div class="login-field">{{ auth_html }}</div>
+		{% endif %}
+		{% if (auth_assets): %}
+			{% for (let asset in auth_assets): %}
+				{% if (asset.type == 'script'): %}
+					<script src="{{ asset.src }}"></script>
+				{% endif %}
+			{% endfor %}
+		{% endif %}
+
+		<button type="submit" class="btn cbi-button-positive important login-submit">{{ _('Log in') }}</button>
+	</form>
+</main>
+
+{% include('footer', { blank_page: true }) %}

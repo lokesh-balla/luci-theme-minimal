@@ -1,0 +1,108 @@
+{#
+ luci-theme-minimal
+ Licensed to the public under the Apache License 2.0.
+-#}
+
+{%
+	import { getuid, getspnam } from 'luci.core';
+
+	const boardinfo = ubus.call('system', 'board') ?? {};
+	const hostname = striptags(boardinfo.hostname ?? '?');
+
+	http.prepare_content('text/html; charset=UTF-8');
+-%}
+
+<!DOCTYPE html>
+<html lang="{{ dispatcher.lang }}">
+	<head>
+		<meta charset="utf-8">
+		<title>{{ striptags(`${hostname}${dispatched?.title ? ` | ${_(dispatched.title)}` : ''}`) }}</title>
+		<script>
+			(function() {
+				var root = document.documentElement, pref = null, mq = window.matchMedia('(prefers-color-scheme: dark)');
+				try { pref = localStorage.getItem('luci-minimal-theme'); } catch (e) {}
+				function apply() {
+					var dark = pref ? pref === 'dark' : mq.matches;
+					root.setAttribute('data-darkmode', dark ? 'true' : 'false');
+				}
+				mq.addEventListener('change', function() { if (!pref) apply(); });
+				apply();
+			})();
+		</script>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="darkreader-lock">
+		<link rel="stylesheet" href="{{ media }}/cascade.css">
+		<link rel="icon" href="{{ media }}/logo.svg" sizes="any">
+		{% if (dispatched?.css): %}
+		<link rel="stylesheet" href="{{ resource }}/{{ dispatched.css }}">
+		{% endif %}
+		{% if (css): %}
+		<style title="text/css">{{ css }}</style>
+		{% endif %}
+		<script src="{{ dispatcher.build_url('admin/translations', dispatcher.lang) }}"></script>
+		<script src="{{ resource }}/cbi.js"></script>
+	</head>
+
+	<body class="lang_{{ dispatcher.lang }}{{ blank_page ? ' blank-page' : '' }}" data-page="{{ entityencode(join('-', length(ctx.request_path) ? ctx.request_path : ctx.path), true) }}">
+		{% if (!blank_page): %}
+		<div class="app">
+			<aside class="sidebar" id="sidebar">
+				<div class="sidebar-header">
+					<a class="brand" href="{{ dispatcher.build_url() }}">
+						<span class="brand-mark"><img src="{{ media }}/logo.svg" alt=""></span>
+						<span class="brand-text">
+							<span class="brand-name">{{ hostname }}</span>
+							<span class="brand-sub">{{ boardinfo.release?.description ? striptags(boardinfo.release.description) : 'OpenWrt' }}</span>
+						</span>
+					</a>
+				</div>
+				<nav class="sidebar-nav" id="mainmenu" aria-label="{{ _('Main menu') }}"></nav>
+				<ul class="sidebar-modes" id="modemenu" style="display:none"></ul>
+			</aside>
+			<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+			<div class="main">
+				<header class="topbar">
+					<button type="button" class="icon-btn sidebar-toggle" id="sidebar-toggle" aria-label="{{ _('Toggle menu') }}">
+						<svg viewBox="0 0 24 24"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+					</button>
+					<nav class="crumbs" id="crumbs" aria-label="{{ _('Breadcrumb') }}"></nav>
+					<div class="topbar-end">
+						<div id="indicators"></div>
+						<button type="button" class="icon-btn" id="theme-toggle" aria-label="{{ _('Toggle dark mode') }}">
+							<svg class="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+							<svg class="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+						</button>
+					</div>
+				</header>
+
+				<div id="maincontent">
+					{% if (getuid() == 0 && getspnam('root')?.pwdp === ''): %}
+						<div class="alert-message warning">
+							<h4>{{ _('No password set!') }}</h4>
+							<p>{{ _('There is no password set on this router. Please configure a root password to protect the web interface.') }}</p>
+							{% if (dispatcher.lookup("admin/system/admin")): %}
+							  <div class="right"><a class="btn" href="{{ dispatcher.build_url("admin/system/admin") }}">{{ _('Go to password configuration...') }}</a></div>
+							{% endif %}
+						</div>
+					{% endif %}
+
+					{% if (boardinfo.rootfs_type == "initramfs"): %}
+						<div class="alert-message warning">
+							<h4>{{ _('System running in recovery (initramfs) mode.') }}</h4>
+							<p>{{ _('No changes to settings will be stored and are lost after rebooting. This mode should only be used to install a firmware upgrade') }}</p>
+							{% if (dispatcher.lookup("admin/system/flash")): %}
+							  <div class="right"><a class="btn" href="{{ dispatcher.build_url("admin/system/flash") }}">{{ _('Go to firmware upgrade...') }}</a></div>
+							{% endif %}
+						</div>
+					{% endif %}
+
+					<noscript>
+						<div class="alert-message warning">
+							<h4>{{ _('JavaScript required!') }}</h4>
+							<p>{{ _('You must enable JavaScript in your browser or LuCI will not work properly.') }}</p>
+						</div>
+					</noscript>
+
+					<div id="tabmenu" style="display:none"></div>
+		{% endif %}

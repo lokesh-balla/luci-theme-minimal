@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if ! uci -q get luci.themes.Minimal >/dev/null; then
+	uci set luci.themes.Minimal=/luci-static/minimal
+	uci set luci.main.mediaurlbase=/luci-static/minimal
+	uci commit luci
+fi
+
+exit 0
