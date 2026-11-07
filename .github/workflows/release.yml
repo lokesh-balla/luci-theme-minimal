@@ -1,0 +1,44 @@
+name: Build OpenWrt APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Makefile"
+      - "htdocs/**"
+      - "root/**"
+      - "ucode/**"
+      - ".github/workflows/build-apk.yml"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out theme
+        uses: actions/checkout@v4
+
+      - name: Build package with OpenWrt SDK
+        uses: openwrt/gh-action-sdk@v8
+        env:
+          ARCH: x86_64-25.12
+          PACKAGES: luci-theme-minimal
+          NO_REFRESH_CHECK: true
+
+      - name: Find built APK
+        id: find-apk
+        shell: bash
+        run: |
+          apk="$(find bin -type f -name 'luci-theme-minimal-*.apk' -print -quit)"
+          if [ -z "$apk" ]; then
+            echo "No APK found. Check the build log and SDK version."
+            exit 1
+          fi
+          echo "path=$apk" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-theme-minimal-apk
+          path: ${{ steps.find-apk.outputs.path }}
