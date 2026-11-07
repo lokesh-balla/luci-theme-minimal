@@ -1,0 +1,80 @@
+name: Build and Release OpenWrt Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version (e.g. 1.0.0 or v1.0.0)'
+        required: false
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # OpenWrt 25+ / SNAPSHOT (APK format via apk mkpkg)
+          - name: openwrt-snapshot-apk
+            arch: x86_64
+          # OpenWrt 23.05 (IPK format via opkg-build)
+          - name: openwrt-23.05-ipk
+            arch: x86_64-23.05.5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Package Version from Release Tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          elif [ -n "${{ github.event.inputs.version }}" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+
+          # Strip leading 'v' if present (e.g. v1.2.0 -> 1.2.0)
+          VERSION="${TAG#v}"
+
+          echo "Setting package version in Makefile to: ${VERSION}"
+          sed -i.bak -e "s/^PKG_VERSION:=.*/PKG_VERSION:=${VERSION}/" Makefile && rm -f Makefile.bak
+          grep "^PKG_VERSION" Makefile
+
+      - name: Build with OpenWrt SDK
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}
+          FEEDNAME: luci-theme-minimal
+          INDEX: 1
+
+      - name: Collect built packages
+        run: |
+          mkdir -p dist/
+          find bin/packages/ -type f \( -name "*.apk" -o -name "*.ipk" \) -exec cp {} dist/ \;
+          echo "Generated packages:"
+          ls -lh dist/
+
+      - name: Upload artifacts (CI)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: dist/*
+          retention-days: 30
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          tag_name: ${{ github.event.release.tag_name }}
