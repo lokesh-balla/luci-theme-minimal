@@ -26,7 +26,7 @@ jobs:
             arch: x86_64
           # OpenWrt 23.05 (IPK format via opkg-build)
           - name: openwrt-23.05-ipk
-            arch: x86_64-23.05.5
+            arch: x86_64-23.05
 
     steps:
       - name: Checkout repository
@@ -34,21 +34,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set Package Version from Release Tag
+      - name: Set Package Version from Tag or Input
         run: |
+          VERSION=""
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
+            VERSION="${TAG#v}"
           elif [ -n "${{ github.event.inputs.version }}" ]; then
             TAG="${{ github.event.inputs.version }}"
-          else
+            VERSION="${TAG#v}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
           fi
 
-          # Strip leading 'v' if present (e.g. v1.2.0 -> 1.2.0)
-          VERSION="${TAG#v}"
-
-          echo "Setting package version in Makefile to: ${VERSION}"
-          sed -i.bak -e "s/^PKG_VERSION:=.*/PKG_VERSION:=${VERSION}/" Makefile && rm -f Makefile.bak
+          if [ -n "$VERSION" ] && [[ "$VERSION" =~ ^[0-9] ]]; then
+            echo "Setting package version in Makefile to: ${VERSION}"
+            sed -i.bak -e "s/^PKG_VERSION:=.*/PKG_VERSION:=${VERSION}/" Makefile && rm -f Makefile.bak
+          else
+            echo "Using default PKG_VERSION defined in Makefile"
+          fi
           grep "^PKG_VERSION" Makefile
 
       - name: Build with OpenWrt SDK
@@ -56,14 +61,20 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           FEEDNAME: luci-theme-minimal
+          PACKAGES: luci-theme-minimal
           INDEX: 1
+          V: s
 
       - name: Collect built packages
         run: |
           mkdir -p dist/
-          find bin/packages/ -type f \( -name "*.apk" -o -name "*.ipk" \) -exec cp {} dist/ \;
+          find bin/packages/ -type f \( -name "*.apk" -o -name "*.ipk" \) -exec cp -v {} dist/ \;
           echo "Generated packages:"
           ls -lh dist/
+          if [ -z "$(ls -A dist)" ]; then
+            echo "::error::No .apk or .ipk packages were generated!"
+            exit 1
+          fi
 
       - name: Upload artifacts (CI)
         uses: actions/upload-artifact@v4
@@ -73,8 +84,7 @@ jobs:
           retention-days: 30
 
       - name: Upload to GitHub Release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          tag_name: ${{ github.event.release.tag_name }}
