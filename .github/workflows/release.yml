@@ -22,7 +22,7 @@ jobs:
       - name: Build package with OpenWrt SDK
         uses: openwrt/gh-action-sdk@v8
         env:
-          ARCH: x86_64-25.12
+          ARCH: x86-64-openwrt-25.12
           PACKAGES: luci-theme-minimal
           NO_REFRESH_CHECK: true
 
