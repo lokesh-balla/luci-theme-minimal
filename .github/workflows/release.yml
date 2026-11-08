@@ -42,15 +42,36 @@ jobs:
           echo "SDK_DIR=$SDK_DIR" >> "$GITHUB_ENV"
 
       - name: Copy package into SDK
+        shell: bash
         run: |
+          set -euxo pipefail
           mkdir -p "$SDK_DIR/package/luci-theme-minimal"
           rsync -a --delete \
             --exclude='.git' \
             --exclude='.github' \
             ./ "$SDK_DIR/package/luci-theme-minimal/"
 
+      - name: Update and install LuCI feed
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "$SDK_DIR"
+          ./scripts/feeds update luci
+          ./scripts/feeds install -a -p luci
+
+      - name: Initialize SDK configuration
+        shell: bash
+        env:
+          TERM: xterm
+        run: |
+          set -euxo pipefail
+          cd "$SDK_DIR"
+          make defconfig
+
       - name: Build package
         shell: bash
+        env:
+          TERM: xterm
         run: |
           set -euxo pipefail
           cd "$SDK_DIR"
@@ -60,12 +81,14 @@ jobs:
         id: find-apk
         shell: bash
         run: |
+          set -euxo pipefail
+
           apk="$(find "$SDK_DIR/bin" -type f \
             -name 'luci-theme-minimal-*.apk' -print -quit)"
 
           if [ -z "$apk" ]; then
             echo "No APK found. Check the build log and SDK output."
-            find "$SDK_DIR/bin" -type f -maxdepth 6 -print
+            find "$SDK_DIR/bin" -maxdepth 6 -type f -print
             exit 1
           fi
 
