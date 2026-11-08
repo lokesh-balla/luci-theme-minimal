@@ -12,90 +12,28 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    name: Build luci-theme-minimal for OpenWrt 25.12
+    runs-on: ubuntu-latest
 
     steps:
       - name: Check out theme
-        uses: actions/checkout@v4
-
-      - name: Install SDK extraction tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y zstd
-
-      - name: Download and extract OpenWrt SDK
-        shell: bash
-        run: |
-          set -euxo pipefail
-
-          SDK_URL="https://downloads.openwrt.org/releases/25.12.6/targets/x86/64/openwrt-sdk-25.12.6-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
-
-          curl --fail --location --retry 3 "$SDK_URL" -o /tmp/openwrt-sdk.tar.zst
-          mkdir -p "$RUNNER_TEMP/openwrt-sdk"
-          tar --use-compress-program=unzstd \
-            -xf /tmp/openwrt-sdk.tar.zst \
-            -C "$RUNNER_TEMP/openwrt-sdk"
-
-          SDK_DIR="$(find "$RUNNER_TEMP/openwrt-sdk" -mindepth 1 -maxdepth 1 -type d -print -quit)"
-          echo "SDK_DIR=$SDK_DIR" >> "$GITHUB_ENV"
-
-      - name: Copy package into SDK
-        shell: bash
-        run: |
-          set -euxo pipefail
-          mkdir -p "$SDK_DIR/package/luci-theme-minimal"
-          rsync -a --delete \
-            --exclude='.git' \
-            --exclude='.github' \
-            ./ "$SDK_DIR/package/luci-theme-minimal/"
-
-      - name: Update and install LuCI feed
-        shell: bash
-        run: |
-          set -euxo pipefail
-          cd "$SDK_DIR"
-          ./scripts/feeds update luci
-          ./scripts/feeds install -a -p luci
-
-      - name: Initialize SDK configuration
-        shell: bash
-        env:
-          TERM: xterm
-        run: |
-          set -euxo pipefail
-          cd "$SDK_DIR"
-          make defconfig
+        uses: actions/checkout@v6
 
       - name: Build package
-        shell: bash
-        env:
-          TERM: xterm
-        run: |
-          set -euxo pipefail
-          cd "$SDK_DIR"
-          make package/luci-theme-minimal/compile V=s
-
-      - name: Find built APK
-        id: find-apk
-        shell: bash
-        run: |
-          set -euxo pipefail
-
-          apk="$(find "$SDK_DIR/bin" -type f \
-            -name 'luci-theme-minimal-*.apk' -print -quit)"
-
-          if [ -z "$apk" ]; then
-            echo "No APK found. Check the build log and SDK output."
-            find "$SDK_DIR/bin" -maxdepth 6 -type f -print
-            exit 1
-          fi
-
-          echo "path=$apk" >> "$GITHUB_OUTPUT"
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        id: build
+        uses: eamonxg/build-luci-package@v2
         with:
-          name: luci-theme-minimal-apk
-          path: ${{ steps.find-apk.outputs.path }}
+          sdk: "25.12.5"
+          packages: '[{"pkg":"luci-theme-minimal","path":"."}]'
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: luci-theme-minimal-${{ steps.build.outputs.pkg_type }}
+          path: out/*.[ai]pk
+          if-no-files-found: error
