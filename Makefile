@@ -36,4 +36,24 @@ define Package/luci-theme-minimal/install
 	$(CP) ./ucode/* $(1)/usr/share/ucode/
 endef
 
+define Package/luci-theme-minimal/postinst
+#!/bin/sh
+[ -n "$${IPKG_INSTROOT}" ] || {
+	[ -f /etc/uci-defaults/30_luci-theme-minimal ] && ( . /etc/uci-defaults/30_luci-theme-minimal ) && rm -f /etc/uci-defaults/30_luci-theme-minimal
+	exit 0
+}
+endef
+
+define Package/luci-theme-minimal/postrm
+#!/bin/sh
+[ -n "$${IPKG_INSTROOT}" ] || {
+	uci -q delete luci.themes.Minimal
+	[ "$$(uci -q get luci.main.mediaurlbase)" = "/luci-static/minimal" ] && {
+		uci -q set luci.main.mediaurlbase=/luci-static/bootstrap
+	}
+	uci commit luci
+	exit 0
+}
+endef
+
 $(eval $(call BuildPackage,luci-theme-minimal))
