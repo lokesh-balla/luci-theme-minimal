@@ -15,26 +15,60 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+
     steps:
       - name: Check out theme
         uses: actions/checkout@v4
 
-      - name: Build package with OpenWrt SDK
-        uses: openwrt/gh-action-sdk@v8
-        env:
-          ARCH: x86-64-openwrt-25.12
-          PACKAGES: luci-theme-minimal
-          NO_REFRESH_CHECK: true
+      - name: Install SDK extraction tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd
+
+      - name: Download and extract OpenWrt SDK
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          SDK_URL="https://downloads.openwrt.org/releases/25.12.6/targets/x86/64/openwrt-sdk-25.12.6-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+
+          curl --fail --location --retry 3 "$SDK_URL" -o /tmp/openwrt-sdk.tar.zst
+          mkdir -p "$RUNNER_TEMP/openwrt-sdk"
+          tar --use-compress-program=unzstd \
+            -xf /tmp/openwrt-sdk.tar.zst \
+            -C "$RUNNER_TEMP/openwrt-sdk"
+
+          SDK_DIR="$(find "$RUNNER_TEMP/openwrt-sdk" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          echo "SDK_DIR=$SDK_DIR" >> "$GITHUB_ENV"
+
+      - name: Copy package into SDK
+        run: |
+          mkdir -p "$SDK_DIR/package/luci-theme-minimal"
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            ./ "$SDK_DIR/package/luci-theme-minimal/"
+
+      - name: Build package
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "$SDK_DIR"
+          make package/luci-theme-minimal/compile V=s
 
       - name: Find built APK
         id: find-apk
         shell: bash
         run: |
-          apk="$(find bin -type f -name 'luci-theme-minimal-*.apk' -print -quit)"
+          apk="$(find "$SDK_DIR/bin" -type f \
+            -name 'luci-theme-minimal-*.apk' -print -quit)"
+
           if [ -z "$apk" ]; then
-            echo "No APK found. Check the build log and SDK version."
+            echo "No APK found. Check the build log and SDK output."
+            find "$SDK_DIR/bin" -type f -maxdepth 6 -print
             exit 1
           fi
+
           echo "path=$apk" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK artifact
