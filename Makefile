@@ -32,8 +32,8 @@ define Package/luci-theme-minimal/install
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(CP) ./root/etc/uci-defaults/* $(1)/etc/uci-defaults/
 
-	$(INSTALL_DIR) $(1)/usr/share/ucode
-	$(CP) ./ucode/* $(1)/usr/share/ucode/
+	$(INSTALL_DIR) $(1)/usr/share/ucode/luci
+	$(CP) ./ucode/* $(1)/usr/share/ucode/luci/
 endef
 
 define Package/luci-theme-minimal/postinst

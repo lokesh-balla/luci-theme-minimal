@@ -19,4 +19,18 @@ for script in root/etc/uci-defaults/*; do
 	sh -n "$script"
 done
 
+# 3. Validate Makefile LuCI ucode destination
+if ! grep -q '\$(INSTALL_DIR)[[:space:]]\+\$(1)/usr/share/ucode/luci' Makefile; then
+	echo "Error: Makefile must install ucode files to \$(1)/usr/share/ucode/luci" >&2
+	exit 1
+fi
+
+# 4. Validate template files exist
+for tpl in header.ut footer.ut sysauth.ut; do
+	if [ ! -f "ucode/template/themes/minimal/$tpl" ]; then
+		echo "Error: Missing expected template: ucode/template/themes/minimal/$tpl" >&2
+		exit 1
+	fi
+done
+
 echo "Theme sanity checks passed successfully!"
