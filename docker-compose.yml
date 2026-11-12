@@ -1,0 +1,17 @@
+services:
+  openwrt-luci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    container_name: luci-theme-dev-2512
+    ports:
+      - "8080:80"
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    environment:
+      - ACTIVE_THEME=minimal
+    volumes:
+      # Mount a single theme repo:
+      - ./:/themes/minimal
