@@ -1,0 +1,20 @@
+daemon.info|netifd|Interface 'lan' is now up
+daemon.info|netifd|Interface 'wan' is now up
+daemon.notice|netifd|Network device 'eth0' link is up
+daemon.info|dnsmasq[1]|started, version 2.90 cachesize 1000
+daemon.info|dnsmasq-dhcp[1]|DHCPREQUEST(br-lan) 192.168.1.112 f0:18:98:6e:3b:11
+daemon.info|dnsmasq-dhcp[1]|DHCPACK(br-lan) 192.168.1.112 f0:18:98:6e:3b:11 MacBook-Pro
+daemon.info|dnsmasq-dhcp[1]|DHCPACK(br-guest) 192.168.20.61 9a:3f:21:c4:0b:77 Galaxy-S24
+daemon.notice|hostapd|phy0-ap0: AP-STA-CONNECTED 3c:22:fb:a0:94:5e auth_alg=sae
+daemon.notice|hostapd|phy1-ap0: AP-STA-CONNECTED f0:18:98:6e:3b:11 auth_alg=sae
+daemon.notice|hostapd|phy0-ap1: AP-STA-DISCONNECTED ee:91:0a:5d:3e:12
+authpriv.info|dropbear[2210]|Child connection from 192.168.1.30:51544
+authpriv.notice|dropbear[2210]|Password auth succeeded for 'root' from 192.168.1.30:51544
+authpriv.warn|dropbear[2391]|Bad password attempt for 'admin' from 203.0.113.45:40112
+daemon.warn|odhcpd[1]|No default route present, overriding ra_lifetime to 0!
+user.notice|adblock-4.2|adblock instance started ::: action: start, priority: 0
+daemon.err|uhttpd[1]|luci: accepted login on / for root from 192.168.1.30
+kern.warn|kernel|nf_conntrack: default automatic helper assignment has been turned off
+daemon.info|wireguard|wg0: peer fxDn4XyXqUgf handshake completed
+user.notice|ddns-scripts[3301]|myddns_ipv4: Update successful - IP '198.51.100.23' send
+daemon.err|collectd[1]|rrdtool plugin: rrd_update_r failed: /tmp/rrd/openwrt-lab/load/load.rrd

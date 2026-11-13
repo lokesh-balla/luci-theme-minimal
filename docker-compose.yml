@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     platform: linux/arm64
     container_name: luci-theme-dev-2512
+    hostname: openwrt-lab
     ports:
       - "8080:80"
     cap_add:
@@ -12,6 +13,11 @@ services:
       - SYS_ADMIN
     environment:
       - ACTIVE_THEME=minimal
+      # Seed testdata/ (networks, wifi, leases, firewall rules, logs) on first start.
+      # Set to 0 to boot with the stock, empty OpenWrt config instead.
+      - SEED_TESTDATA=1
     volumes:
       # Mount a single theme repo:
       - ./:/themes/minimal
+      # Dummy router config and data used to exercise the theme:
+      - ./testdata:/opt/luci-testdata:ro

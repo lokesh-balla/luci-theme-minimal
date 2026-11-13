@@ -1,0 +1,76 @@
+# Dummy network for theme testing. LAN ports are dummy links created by the entrypoint;
+# the WAN address is filled in at startup from the container's eth0.
+
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config globals 'globals'
+	option ula_prefix 'fd3c:9a2e:71b4::/48'
+	option packet_steering '1'
+
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'lan1'
+	list ports 'lan2'
+	list ports 'lan3'
+	list ports 'lan4'
+
+config interface 'lan'
+	option device 'br-lan'
+	option proto 'static'
+	option ipaddr '192.168.1.1'
+	option netmask '255.255.255.0'
+	option ip6assign '60'
+
+config interface 'wan'
+	option device 'eth0'
+	option proto 'static'
+	option ipaddr '__WAN_IP__'
+	option netmask '__WAN_MASK__'
+	option gateway '__WAN_GW__'
+	list dns '1.1.1.1'
+	list dns '9.9.9.9'
+
+config device
+	option name 'br-guest'
+	option type 'bridge'
+	list ports 'guest0'
+
+config interface 'guest'
+	option device 'br-guest'
+	option proto 'static'
+	option ipaddr '192.168.20.1'
+	option netmask '255.255.255.0'
+
+config interface 'iot'
+	option device 'iot0'
+	option proto 'static'
+	option ipaddr '192.168.30.1'
+	option netmask '255.255.255.0'
+
+config interface 'wg0'
+	option proto 'wireguard'
+	option private_key 'WWM7nR9k+ZV/g4SCVJHEDw9Skxvcn0dxulMeUeHcYjw='
+	option listen_port '51820'
+	list addresses '10.10.0.1/24'
+
+config wireguard_wg0
+	option description 'Pixel phone'
+	option public_key 'fxDn4XyXqUgffybTIyBV2CdZbEn3ZagHJmBYtfVqRw4='
+	list allowed_ips '10.10.0.2/32'
+	option persistent_keepalive '25'
+
+config wireguard_wg0
+	option description 'Work laptop'
+	option public_key 'k0S+Zc6nxXP7xJdjEQhLe6IyPazTTc6A2KDFyEVsr9g='
+	list allowed_ips '10.10.0.3/32'
+	option persistent_keepalive '25'
+
+config interface 'vpn_old'
+	option proto 'none'
+	option device 'tun0'
+	option auto '0'

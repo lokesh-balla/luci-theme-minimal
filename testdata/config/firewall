@@ -1,0 +1,146 @@
+config defaults
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+	option synflood_protect '1'
+	option flow_offloading '1'
+
+config zone
+	option name 'lan'
+	list network 'lan'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'ACCEPT'
+
+config zone
+	option name 'wan'
+	list network 'wan'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+	option masq '1'
+	option mtu_fix '1'
+
+config zone
+	option name 'guest'
+	list network 'guest'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+
+config zone
+	option name 'iot'
+	list network 'iot'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+
+config zone
+	option name 'vpn'
+	list network 'wg0'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'ACCEPT'
+
+config forwarding
+	option src 'lan'
+	option dest 'wan'
+
+config forwarding
+	option src 'guest'
+	option dest 'wan'
+
+config forwarding
+	option src 'vpn'
+	option dest 'lan'
+
+config forwarding
+	option src 'lan'
+	option dest 'iot'
+
+config rule
+	option name 'Allow-DHCP-Renew'
+	option src 'wan'
+	option proto 'udp'
+	option dest_port '68'
+	option target 'ACCEPT'
+	option family 'ipv4'
+
+config rule
+	option name 'Allow-Ping'
+	option src 'wan'
+	option proto 'icmp'
+	option icmp_type 'echo-request'
+	option family 'ipv4'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Allow-WireGuard'
+	option src 'wan'
+	option proto 'udp'
+	option dest_port '51820'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Guest-DNS-DHCP'
+	option src 'guest'
+	option proto 'tcp udp'
+	option dest_port '53 67 68'
+	option target 'ACCEPT'
+
+config rule
+	option name 'IoT-DNS-DHCP'
+	option src 'iot'
+	option proto 'tcp udp'
+	option dest_port '53 67 68'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Kids-Night-Block'
+	option src 'lan'
+	option src_mac '6c:4a:85:19:e2:7a'
+	option dest 'wan'
+	option target 'REJECT'
+	option start_time '22:00:00'
+	option stop_time '06:30:00'
+	list weekdays 'Sun Mon Tue Wed Thu'
+
+config rule
+	option name 'Block-Telnet-Out'
+	option src 'lan'
+	option dest 'wan'
+	option proto 'tcp'
+	option dest_port '23'
+	option target 'DROP'
+	option enabled '0'
+
+config redirect
+	option name 'Plex'
+	option src 'wan'
+	option proto 'tcp'
+	option src_dport '32400'
+	option dest 'lan'
+	option dest_ip '192.168.1.10'
+	option dest_port '32400'
+	option target 'DNAT'
+
+config redirect
+	option name 'SSH-NAS'
+	option src 'wan'
+	option proto 'tcp'
+	option src_dport '2222'
+	option dest 'lan'
+	option dest_ip '192.168.1.10'
+	option dest_port '22'
+	option target 'DNAT'
+	option enabled '0'
+
+config redirect
+	option name 'Minecraft'
+	option src 'wan'
+	option proto 'tcp udp'
+	option src_dport '25565'
+	option dest 'lan'
+	option dest_ip '192.168.1.30'
+	option dest_port '25565'
+	option target 'DNAT'

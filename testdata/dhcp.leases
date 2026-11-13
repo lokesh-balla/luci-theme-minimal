@@ -1,0 +1,16 @@
+# <seconds from now> <mac> <ip> <hostname> <client-id>
+# The entrypoint turns the first column into an absolute expiry time.
+0 a8:a1:59:3c:21:0e 192.168.1.10 nas 01:a8:a1:59:3c:21:0e
+0 30:05:5c:8e:41:b2 192.168.1.20 printer *
+41213 04:7c:16:aa:52:9d 192.168.1.30 desktop 01:04:7c:16:aa:52:9d
+38022 f0:18:98:6e:3b:11 192.168.1.112 MacBook-Pro 01:f0:18:98:6e:3b:11
+29881 3c:22:fb:a0:94:5e 192.168.1.118 iPhone *
+22157 6c:4a:85:19:e2:7a 192.168.1.124 kids-tablet *
+12410 b8:27:eb:4d:7a:20 192.168.1.131 raspberrypi 01:b8:27:eb:4d:7a:20
+8044 00:17:88:69:1c:03 192.168.1.140 Philips-hue *
+3605 cc:50:e3:12:aa:91 192.168.1.152 * *
+5321 9a:3f:21:c4:0b:77 192.168.20.61 Galaxy-S24 *
+2210 ee:91:0a:5d:3e:12 192.168.20.74 guest-laptop *
+71102 dc:a6:32:11:7f:c4 192.168.30.5 homeassistant *
+80233 24:6f:28:b1:e0:4c 192.168.30.21 esp32-livingroom *
+80233 24:6f:28:b1:e0:9a 192.168.30.22 esp32-garage *
