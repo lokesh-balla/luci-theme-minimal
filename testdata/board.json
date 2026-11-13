@@ -1,0 +1,16 @@
+{
+	"model": {
+		"id": "openwrt-lab",
+		"name": "OpenWrt Lab (theme test board)"
+	},
+	"network": {
+		"lan": {
+			"ports": [ "lan1", "lan2", "lan3", "lan4" ],
+			"protocol": "static"
+		},
+		"wan": {
+			"device": "eth0",
+			"protocol": "dhcp"
+		}
+	}
+}

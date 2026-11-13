@@ -84,6 +84,9 @@ seed_testdata() {
         touch "$MARK"
     fi
 
+    # Board description: drives the Port status widget on the overview page
+    [ -f /etc/board.json ] || cp "$SRC/board.json" /etc/board.json
+
     # DHCP leases live in /tmp, so rebuild them every start with fresh expiry times
     now="$(date +%s)"
     grep -v '^#' "$SRC/dhcp.leases" | awk -v now="$now" 'NF { $1 = ($1 == 0 ? 0 : now + $1); print }' > /tmp/dhcp.leases
