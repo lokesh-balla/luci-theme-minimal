@@ -1,21 +1,24 @@
-name: Release packages
+name: Release
+
+# Manual release only. From the Actions tab choose "Run workflow", pick the
+# branch to release in "Use workflow from", and enter a version such as v1.2.0
+# or v1.2.0-rc.1. The workflow builds .ipk and .apk packages from that branch
+# and, only if both builds succeed, creates the tag on the exact commit that
+# was built and publishes a GitHub Release. It never pushes commits.
 
 on:
-  push:
-    tags:
-      - "*"
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: "Release tag to build (e.g. v1.0.0)"
-        required: false
-        default: ""
+      version:
+        description: "Version to release, e.g. v1.2.0 or v1.2.0-rc.1 (becomes the tag)"
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 env:
@@ -23,7 +26,7 @@ env:
 
 jobs:
   metadata:
-    name: Resolve release version
+    name: Validate version and run checks
     runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.version.outputs.tag }}
@@ -32,31 +35,52 @@ jobs:
       apk_version: ${{ steps.version.outputs.apk_version }}
       ipk_version: ${{ steps.version.outputs.ipk_version }}
       package_release: ${{ steps.version.outputs.package_release }}
-      docs_branch: ${{ steps.branch.outputs.name }}
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
+      - name: Require a branch
+        if: github.ref_type != 'branch'
+        run: |
+          echo "::error::Run this workflow from a branch (selected: ${GITHUB_REF})."
+          exit 1
+
       - uses: actions/checkout@v7
 
       - name: Resolve release version
         id: version
         env:
-          INPUT_TAG: ${{ inputs.tag_name }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          target_tag="${INPUT_TAG:-${GITHUB_REF_NAME}}"
-          python3 .github/scripts/release_metadata.py "${target_tag}" >> "$GITHUB_OUTPUT"
+          python3 .github/scripts/release_metadata.py "${INPUT_VERSION}" >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
 
-      - name: Select documentation branch
-        id: branch
+      - name: Refuse an existing tag
         env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          printf 'name=%s\n' "$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag ${TAG} already exists. Pick a new version."
+            exit 1
+          fi
 
-  checks:
-    uses: ./.github/workflows/check.yml
+      - name: Record commit
+        id: commit
+        run: |
+          sha="$(git rev-parse HEAD)"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "Releasing ${GITHUB_REF_NAME} at ${sha}" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Check scripts and templates
+        run: sh .github/scripts/check_theme.sh
 
   build:
     name: Build ${{ matrix.package_format }} packages
-    needs: [checks, metadata]
+    needs: metadata
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -70,10 +94,10 @@ jobs:
             sdk_pattern: openwrt-sdk-25.12.5-x86-64_.*Linux-x86_64.tar.zst
 
     steps:
-      - name: Checkout theme
+      - name: Checkout theme at the validated commit
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          ref: ${{ needs.metadata.outputs.sha }}
 
       - name: Install build dependencies
         run: |
@@ -186,6 +210,8 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      # The version is written into the SDK's copy of the Makefile only;
+      # nothing is committed back to the repository.
       - name: Prepare local packages
         env:
           RELEASE_VERSION: ${{ matrix.package_format == 'apk' && needs.metadata.outputs.apk_version || needs.metadata.outputs.ipk_version }}
@@ -257,12 +283,16 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish GitHub Release
+    name: Tag and publish release
     runs-on: ubuntu-24.04
     needs: [build, metadata]
+    permissions:
+      contents: write
     steps:
-      - name: Checkout release installation notes
+      - name: Checkout release notes
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.metadata.outputs.sha }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v8
@@ -271,46 +301,16 @@ jobs:
           pattern: packages-*
           merge-multiple: true
 
+      # Creates the tag at the built commit (target_commitish) and the release.
       - name: Publish release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.metadata.outputs.tag }}
+          target_commitish: ${{ needs.metadata.outputs.sha }}
           name: ${{ needs.metadata.outputs.tag }}
           body_path: ${{ needs.metadata.outputs.prerelease == 'true' && '.github/release-preview.md' || '.github/release-installation.md' }}
           prerelease: ${{ needs.metadata.outputs.prerelease == 'true' }}
           make_latest: ${{ needs.metadata.outputs.prerelease == 'true' && 'false' || 'true' }}
-          generate_release_notes: ${{ needs.metadata.outputs.prerelease == 'false' }}
+          generate_release_notes: true
           fail_on_unmatched_files: true
           files: release-assets/*
-
-  sync-docs:
-    name: Sync release docs
-    runs-on: ubuntu-24.04
-    needs: [release, metadata]
-    if: needs.metadata.outputs.prerelease == 'false'
-    steps:
-      - name: Checkout release documentation branch
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.metadata.outputs.docs_branch }}
-          fetch-depth: 0
-
-      - name: Update Makefile version
-        run: |
-          sed -i -E "s/^(PKG_VERSION):=.*/\1:=${{ needs.metadata.outputs.version }}/" Makefile
-          sed -i -E "s/^(PKG_RELEASE):=.*/\1:=${{ needs.metadata.outputs.package_release }}/" Makefile
-
-      - name: Commit updated docs
-        env:
-          DOCS_BRANCH: ${{ needs.metadata.outputs.docs_branch }}
-        run: |
-          if git diff --quiet -- Makefile; then
-            echo "No documentation updates to commit."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Makefile
-          git commit -m "docs: sync release version for ${{ needs.metadata.outputs.tag }}"
-          git push origin "HEAD:${DOCS_BRANCH}"

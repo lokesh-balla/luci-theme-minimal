@@ -44,3 +44,17 @@ the container seeds `testdata/` so pages have realistic content:
 Config is seeded once, so changes made in LuCI survive restarts. Run
 `docker compose up -d --force-recreate` to reset, or set `SEED_TESTDATA=0` in
 `docker-compose.yml` to boot with an empty config.
+
+### Releasing
+
+Releases are manual and never push commits to the repository.
+
+1. In GitHub, open **Actions → Release → Run workflow**.
+2. Pick the branch to release under **Use workflow from**.
+3. Enter a version such as `v1.2.0`, or `v1.2.0-rc.1` for a pre-release.
+
+The workflow validates the version and refuses a tag that already exists. It runs the
+theme checks and builds the `.ipk` (OpenWrt 23.05) and `.apk` (OpenWrt 25.12) packages.
+Only when both builds succeed does it create the tag on the exact commit it built and
+publish a GitHub Release with the packages attached. The version is stamped into the
+package at build time, so `PKG_VERSION` in the Makefile does not need updating.

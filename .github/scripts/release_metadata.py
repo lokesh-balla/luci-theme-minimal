@@ -10,23 +10,19 @@ def resolve(tag):
         r"v?([0-9]+(?:\.[0-9]+){1,3})(?:-(alpha|beta|rc)\.([1-9][0-9]*))?", tag
     )
     if not match:
-        # Fallback for branches or arbitrary non-semver tags
-        version = tag.removeprefix("v")
-        return {
-            "tag": tag,
-            "version": version,
-            "prerelease": "false",
-            "package_release": "1",
-            "apk_version": version,
-            "ipk_version": version,
-        }
+        raise ValueError(
+            f"invalid version {tag!r}: use vMAJOR.MINOR.PATCH, optionally "
+            "followed by -alpha.N, -beta.N or -rc.N (e.g. v1.2.0, v1.2.0-rc.1)"
+        )
 
     base, stage, number = match.groups()
+    if not tag.startswith("v"):
+        tag = f"v{tag}"
     version = tag.removeprefix("v")
     revision = 1
     apk_version = f"{base}_{stage}{number}" if stage else base
     # A tilde sorts before the final version in opkg.
-    ipk_version = f"{base}~{stage}{number}-{revision}" if stage else base
+    ipk_version = f"{base}~{stage}{number}" if stage else base
 
     return {
         "tag": tag,
