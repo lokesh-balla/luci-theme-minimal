@@ -15,6 +15,39 @@ const ICONS = {
 	_default: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>'
 };
 
+/*
+ * Button intents. LuCI's button classes don't reliably say what a button does
+ * ("Delete" is sometimes -remove, sometimes -negative; "Restart" is a plain
+ * -action), so classify by label instead. Labels go through _() so this keeps
+ * working in every language that translates them.
+ *
+ *   danger   destroys data or cuts connections    -> red
+ *   caution  interrupts something temporarily     -> amber
+ *   positive starts or enables something          -> green
+ *   neutral  opens, edits or inspects             -> plain outline (never solid)
+ */
+const BUTTON_INTENTS = [
+	[ 'danger',   'trash',   [ 'Delete', 'Remove', 'Delete this network', 'Flush' ] ],
+	[ 'danger',   'x',       [ 'Kill', 'Terminate', 'Disconnect', 'Unmount', 'Hang Up', 'Perform reset' ] ],
+	[ 'danger',   'flash',   [ 'Flash image', 'Flash', 'Continue flashing' ] ],
+	[ 'caution',  'rotate',  [ 'Restart', 'Reload', 'Reboot', 'Perform reboot', 'Restart radio interface', 'Reconnect', 'Revert', 'Revert changes' ] ],
+	[ 'caution',  'stop',    [ 'Stop', 'Disable', 'Stop WPS' ] ],
+	[ 'caution',  'pause',   [ 'Suspend', 'Pause' ] ],
+	[ 'positive', 'play',    [ 'Start', 'Enable', 'Connect', 'Start WPS', 'Enable this network' ] ],
+	[ 'positive', 'refresh', [ 'Update', 'Update lists', 'Refresh', 'Search for firmware upgrade' ] ],
+	[ 'neutral',  'edit',    [ 'Edit', 'Edit this network', 'Configure' ] ],
+	[ 'neutral',  'search',  [ 'Scan', 'Find and join network' ] ],
+	[ 'neutral',  'x',       [ 'Clear' ] ],
+	[ 'neutral',  'copy',    [ 'Clone' ] ],
+	[ 'neutral',  'plus',    [ 'Add', 'Add instance', 'Add new entry' ] ],
+	[ 'neutral',  'upload',  [ 'Upload', 'Upload Package', 'Upload file', 'Upload archive' ] ],
+	[ 'neutral',  'download',[ 'Download', 'Generate archive', 'Download backup' ] ]
+];
+
+function normLabel(text) {
+	return String(text || '').replace(/[\u2026.\u00bb\s]+$/, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
 function icon(paths, cls) {
 	const span = E('span', { 'class': cls || 'nav-icon', 'aria-hidden': 'true' });
 	span.innerHTML = '<svg viewBox="0 0 24 24">' + paths + '</svg>';
@@ -24,6 +57,7 @@ function icon(paths, cls) {
 return baseclass.extend({
 	__init__() {
 		this.bindChrome();
+		this.bindButtonIntents();
 		ui.menu.load().then((tree) => this.render(tree));
 	},
 
@@ -166,6 +200,62 @@ return baseclass.extend({
 			this.renderTabMenu(activeNode, url + '/' + activeNode.name, (level || 0) + 1);
 
 		return ul;
+	},
+
+	bindButtonIntents() {
+		const map = new Map();
+
+		BUTTON_INTENTS.forEach(([ intent, glyph, labels ]) => labels.forEach(label => {
+			for (const l of [ label, _(label) ])
+				if (!map.has(normLabel(l)))
+					map.set(normLabel(l), { intent, glyph });
+		}));
+
+		const tag = (btn) => {
+			const text = btn.tagName == 'INPUT' ? btn.value : btn.textContent;
+
+			if (btn.dataset.intentLabel === text)
+				return;
+
+			btn.dataset.intentLabel = text;
+
+			/* exact label first, then the leading verb ("Stop DDNS", "Restart DDns") */
+			const label = normLabel(text);
+			const hit = map.get(label) || (label.includes(' ') ? map.get(label.split(' ')[0]) : null);
+
+			if (hit) {
+				btn.dataset.intent = hit.intent;
+				/* inputs can't render ::before, so only buttons get a glyph */
+				if (btn.tagName != 'INPUT')
+					btn.dataset.icon = hit.glyph;
+				else
+					delete btn.dataset.icon;
+			}
+			else {
+				delete btn.dataset.intent;
+				delete btn.dataset.icon;
+			}
+		};
+
+		const scan = () => {
+			document.querySelectorAll('#maincontent button, #maincontent .btn, #maincontent .cbi-button, #maincontent input[type="button"], #maincontent input[type="submit"], #modal_overlay button, #modal_overlay .btn, #modal_overlay .cbi-button')
+				.forEach(btn => {
+					if (!btn.classList.contains('cbi-dropdown'))
+						tag(btn);
+				});
+		};
+
+		let queued = false;
+		const schedule = () => {
+			if (queued)
+				return;
+
+			queued = true;
+			requestAnimationFrame(() => { queued = false; scan(); });
+		};
+
+		new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: [ 'value' ] });
+		scan();
 	},
 
 	bindChrome() {

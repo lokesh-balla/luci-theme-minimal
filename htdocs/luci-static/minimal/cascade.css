@@ -60,6 +60,10 @@
 	--warning-strong: #f59e0b;
 	--warning-soft: #fffbeb;
 	--warning-border: #fde68a;
+	--warning-solid: #b45309;
+	--warning-solid-foreground: #ffffff;
+	--success-solid: #047857;
+	--success-solid-foreground: #ffffff;
 	--info: #1d4ed8;
 	--info-soft: #eff6ff;
 	--info-border: #bfdbfe;
@@ -159,6 +163,10 @@
 	--warning-strong: #f59e0b;
 	--warning-soft: rgba(251, 191, 36, .1);
 	--warning-border: rgba(251, 191, 36, .35);
+	--warning-solid: #f59e0b;
+	--warning-solid-foreground: #0b1220;
+	--success-solid: #10b981;
+	--success-solid-foreground: #0b1220;
 	--info: #93c5fd;
 	--info-soft: rgba(96, 165, 250, .12);
 	--info-border: rgba(96, 165, 250, .35);
@@ -1815,7 +1823,7 @@ label > input[type="radio"] {
 
 .cbi-button-positive {
 	--btn-fg: var(--success);
-	--btn-border: var(--success-border);
+	--btn-border: var(--input);
 	--btn-hover-bg: var(--success-soft);
 	--btn-ring: var(--success-strong);
 }
@@ -1823,7 +1831,7 @@ label > input[type="radio"] {
 .cbi-button-negative,
 .cbi-button-remove {
 	--btn-fg: var(--destructive);
-	--btn-border: var(--destructive-border);
+	--btn-border: var(--input);
 	--btn-hover-bg: var(--destructive-soft);
 	--btn-ring: var(--destructive);
 }
@@ -1896,6 +1904,120 @@ input[type="button"][disabled] {
 	cursor: progress;
 	pointer-events: none;
 }
+
+/* -- intents ------------------------------------------------------- */
+/* menu-minimal.js sets data-intent / data-icon from the button label,  */
+/* because LuCI's classes don't say what a button does. Intents sit     */
+/* after the variants so they win; a solid (.important / apply) button  */
+/* keeps its weight but takes the intent's colour.                      */
+
+:is(.btn, .cbi-button, button, input)[data-intent="neutral"] {
+	--btn-bg: var(--card);
+	--btn-fg: var(--foreground);
+	--btn-border: var(--input);
+	--btn-hover-bg: var(--accent);
+	--btn-hover-fg: var(--foreground);
+	--btn-ring: var(--ring);
+	--btn-shadow: var(--shadow-sm);
+}
+
+:is(.btn, .cbi-button, button, input)[data-intent="danger"] {
+	--btn-bg: var(--card);
+	--btn-fg: var(--destructive);
+	--btn-border: var(--destructive-border);
+	--btn-hover-bg: var(--destructive-soft);
+	--btn-hover-fg: var(--destructive);
+	--btn-ring: var(--destructive);
+	--btn-shadow: var(--shadow-sm);
+}
+
+:is(.btn, .cbi-button, button, input)[data-intent="caution"] {
+	--btn-bg: var(--card);
+	--btn-fg: var(--foreground);
+	--btn-border: var(--input);
+	--btn-icon-color: var(--warning-strong);
+	--btn-hover-bg: var(--warning-soft);
+	--btn-hover-fg: var(--warning);
+	--btn-ring: var(--warning-strong);
+	--btn-shadow: var(--shadow-sm);
+}
+
+:is(.btn, .cbi-button, button, input)[data-intent="positive"] {
+	--btn-bg: var(--card);
+	--btn-fg: var(--foreground);
+	--btn-border: var(--input);
+	--btn-icon-color: var(--success-strong);
+	--btn-hover-bg: var(--success-soft);
+	--btn-hover-fg: var(--success);
+	--btn-ring: var(--success-strong);
+	--btn-shadow: var(--shadow-sm);
+}
+
+input[data-intent="caution"] { --btn-fg: var(--warning); }
+input[data-intent="positive"] { --btn-fg: var(--success); }
+
+/* solid intent colour only for the confirm button inside a dialog;    */
+/* on a page an .important Stop/Delete stays an outline, so the page    */
+/* keeps a single solid primary action                                  */
+.modal :is(.btn, .cbi-button, button, input)[data-intent="danger"]:is(.important, .primary, .danger, .cbi-button-apply) {
+	--btn-bg: var(--destructive-solid);
+	--btn-fg: var(--destructive-foreground);
+	--btn-border: var(--destructive-solid);
+	--btn-hover-bg: color-mix(in srgb, var(--destructive-solid) 86%, #000);
+	--btn-hover-fg: var(--destructive-foreground);
+	--btn-shadow: var(--shadow);
+}
+
+.modal :is(.btn, .cbi-button, button, input)[data-intent="caution"]:is(.important, .primary, .cbi-button-apply) {
+	--btn-bg: var(--warning-solid);
+	--btn-fg: var(--warning-solid-foreground);
+	--btn-border: var(--warning-solid);
+	--btn-hover-bg: color-mix(in srgb, var(--warning-solid) 86%, #000);
+	--btn-hover-fg: var(--warning-solid-foreground);
+	--btn-shadow: var(--shadow);
+}
+
+.modal :is(.btn, .cbi-button, button, input)[data-intent="positive"]:is(.important, .primary, .cbi-button-apply) {
+	--btn-bg: var(--success-solid);
+	--btn-fg: var(--success-solid-foreground);
+	--btn-border: var(--success-solid);
+	--btn-hover-bg: color-mix(in srgb, var(--success-solid) 86%, #000);
+	--btn-hover-fg: var(--success-solid-foreground);
+	--btn-shadow: var(--shadow);
+}
+
+/* solid buttons and hovered buttons draw the glyph in the text colour */
+:is(.modal) :is(.btn, .cbi-button, button)[data-intent]:is(.important, .primary, .danger, .cbi-button-apply),
+:is(.btn, .cbi-button, button)[data-intent]:hover {
+	--btn-icon-color: currentColor;
+}
+
+/* leading glyph: a second cue next to colour, so intent survives colour-blindness */
+:is(.btn, .cbi-button, button)[data-icon]:not(.spinning)::before {
+	content: "";
+	flex: none;
+	width: .875rem;
+	height: .875rem;
+	margin-left: -.125rem;
+	background: var(--btn-icon-color, currentColor);
+	-webkit-mask: var(--btn-icon) center / contain no-repeat;
+	mask: var(--btn-icon) center / contain no-repeat;
+}
+
+[data-icon="trash"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6%22/%3E%3C/svg%3E"); }
+[data-icon="x"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M18 6 6 18M6 6l12 12%22/%3E%3C/svg%3E"); }
+[data-icon="rotate"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8%22/%3E%3Cpath d=%22M21 3v5h-5%22/%3E%3C/svg%3E"); }
+[data-icon="stop"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x=%226%22 y=%226%22 width=%2212%22 height=%2212%22 rx=%222%22/%3E%3C/svg%3E"); }
+[data-icon="play"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22m7 4 13 8-13 8V4z%22/%3E%3C/svg%3E"); }
+[data-icon="refresh"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8%22/%3E%3Cpath d=%22M21 3v5h-5%22/%3E%3Cpath d=%22M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16%22/%3E%3Cpath d=%22M8 16H3v5%22/%3E%3C/svg%3E"); }
+[data-icon="edit"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M21.17 6.81a2.83 2.83 0 0 0-4-4L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z%22/%3E%3C/svg%3E"); }
+[data-icon="search"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx=%2211%22 cy=%2211%22 r=%227%22/%3E%3Cpath d=%22m21 21-4.3-4.3%22/%3E%3C/svg%3E"); }
+[data-icon="copy"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width=%2213%22 height=%2213%22 x=%229%22 y=%229%22 rx=%222%22/%3E%3Cpath d=%22M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1%22/%3E%3C/svg%3E"); }
+[data-icon="plus"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M5 12h14M12 5v14%22/%3E%3C/svg%3E"); }
+[data-icon="upload"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12%22/%3E%3C/svg%3E"); }
+[data-icon="download"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3%22/%3E%3C/svg%3E"); }
+[data-icon="flash"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M13 2 3 14h9l-1 8 10-12h-9l1-8z%22/%3E%3C/svg%3E"); }
+[data-icon="pause"] { --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x=%226%22 y=%225%22 width=%224%22 height=%2214%22 rx=%221%22/%3E%3Crect x=%2214%22 y=%225%22 width=%224%22 height=%2214%22 rx=%221%22/%3E%3C/svg%3E"); }
 
 /* -- layout helpers -- */
 
@@ -2670,6 +2792,25 @@ form.inline {
 	background: var(--muted);
 	color: var(--foreground);
 	white-space: pre-wrap;
+}
+
+/* inline filter rows (system log, kernel log): labels and controls in a plain div */
+.cbi-section > div:has(> label[for]):has(> select, > input) {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.cbi-section > div:has(> label[for]) > :is(select, input[type="text"], input[type="number"], input:not([type])) {
+	flex: 0 1 16rem;
+	width: auto;
+	min-width: 10rem;
+	margin: 0 !important;
+}
+
+.cbi-section > div:has(> label[for]) > label {
+	margin: 0 !important;
 }
 
 /* package manager: its inline css lets every child grow; keep the pager compact */
